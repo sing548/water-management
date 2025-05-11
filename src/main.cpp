@@ -18,9 +18,10 @@ int pumpPin = D1;
 
 bool pumpActive = false;
 unsigned long pumpStartTime = 0;
+unsigned int pumpDuration = 0;
 
-const char* user = "";
-const char* password = "";
+const char* user = "Pumpöö";
+const char* pumpPassword = "BitteWasserDamitMeinDoofenPflanzenNichtStärben";
 
 void setupServer();
 void restServerRouting();
@@ -151,16 +152,22 @@ void getShowHumidity() {
   </head>
   <body>
     <div class="card">
-      <h1>Sensor Readings</h1>
-      <div class="sensor">Sensor 1: )rawliteral" + value1 + R"rawliteral(</div>
-      <div class="sensor">Sensor 2: )rawliteral" + value2 + R"rawliteral(</div>
-      <div class="sensor">Sensor 3: )rawliteral" + value3 + R"rawliteral(</div>
+      <h2>Start Pump</h2>
       <form action="/startPump" method="POST">
-        <button type="submit">Start Pump</button>
+        <button name="duration" value="15" type="submit">15 Second Pump</button>
+        <button name="duration" value="30" type="submit">30 Second Pump</button>
+        <button name="duration" value="60" type="submit">1 Minute Pump</button>
       </form>
+
+      <form action="/startPump" method="POST" style="margin-top:20px;">
+        <input type="number" name="duration" placeholder="Custom (sec)" min="1" max="180" required>
+        <button type="submit">Start Custom</button>
+      </form>
+
     </div>
   </body>
   </html>
+
   )rawliteral";
 
   server.send(200, "text/html", html);
@@ -168,70 +175,76 @@ void getShowHumidity() {
 
 void postStartPump() {
   
-  if (!server.authenticate(user, password)) {
+  if (!server.authenticate(user, pumpPassword)) {
     server.requestAuthentication();
     return;
   }
 
+  int durationSec = server.hasArg("duration") ? server.arg("duration").toInt() : 4;
+
+  // Cap the duration to a safe maximum, e.g., 300 seconds
+  if (durationSec < 1) durationSec = 1;
+  if (durationSec > 180) durationSec = 180;
+
   digitalWrite(pumpPin, HIGH);
   pumpActive = true;
   pumpStartTime = millis();
+  pumpDuration = durationSec * 1000;
   Serial.println("Pump turned on!");
 
   String html = R"rawliteral(
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Starting Pump...</title>
-    <style>
-      body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f0f4f8;
-        color: #333;
-        text-align: center;
-        padding: 50px;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pump Running</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      text-align: center;
+      padding: 50px;
+    }
+    .spinner {
+      margin: 40px auto;
+      width: 50px;
+      height: 50px;
+      border: 6px solid #ccc;
+      border-top: 6px solid #007BFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    p {
+      font-size: 1.2rem;
+      margin-top: 20px;
+      color: #444;
+    }
+  </style>
+  <script>
+    let seconds = )rawliteral" + String(durationSec + 1) + R"rawliteral(;
+    function updateCountdown() {
+      document.getElementById("countdown").innerText = seconds;
+      if (seconds === 0) {
+        window.location.href = "/";
+      } else {
+        seconds--;
+        setTimeout(updateCountdown, 1000);
       }
-      .spinner {
-        margin: 40px auto;
-        width: 50px;
-        height: 50px;
-        border: 6px solid #ccc;
-        border-top: 6px solid #007BFF;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      p {
-        font-size: 1.2rem;
-        margin-top: 20px;
-        color: #555;
-      }
-    </style>
-    <script>
-      let seconds = 5;
-      function updateCountdown() {
-        document.getElementById("countdown").innerText = seconds;
-        if (seconds === 0) {
-          window.location.href = "/";
-        } else {
-          seconds--;
-          setTimeout(updateCountdown, 1000);
-        }
-      }
-      window.onload = updateCountdown;
-    </script>
-  </head>
-  <body>
-    <h1>Starting Pump...</h1>
-    <div class="spinner"></div>
-    <p>Redirecting in <span id="countdown">5</span> seconds...</p>
-  </body>
-  </html>
-  )rawliteral";
+    }
+    window.onload = updateCountdown;
+  </script>
+</head>
+<body>
+  <h1>Pump started for )rawliteral" + String(durationSec) + R"rawliteral( seconds</h1>
+  <div class="spinner"></div>
+  <p>Redirecting in <span id="countdown">)rawliteral" + String(durationSec + 1) + R"rawliteral(</span> seconds...</p>
+</body>
+</html>
+)rawliteral";
 
   server.send(200, "text/html", html);
 }
@@ -271,9 +284,10 @@ String getSensorValue3() {
 void loop() {
   server.handleClient();
 
-  if (pumpActive && millis() - pumpStartTime >= 4000) {
+  if (pumpActive && millis() - pumpStartTime >= pumpDuration) {
     digitalWrite(pumpPin, LOW);
     pumpActive = false;
     Serial.println("Pump turned off!");
+    pumpDuration = 0;
   }
 }
