@@ -4,8 +4,8 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 
-const char* ssid = "Guenther5";
-const char* password = "DariomagBananen1";
+const char* ssid = "";
+const char* password = "";
 String newHostName = "ESP_Water_Server";
 
 ESP8266WebServer server(80);
@@ -20,8 +20,8 @@ bool pumpActive = false;
 unsigned long pumpStartTime = 0;
 unsigned int pumpDuration = 0;
 
-const char* user = "Pumpöö";
-const char* pumpPassword = "BitteWasserDamitMeinDoofenPflanzenNichtStärben";
+const char* user = "";
+const char* pumpPassword = "";
 
 void setupServer();
 void restServerRouting();
@@ -154,13 +154,13 @@ void getShowHumidity() {
     <div class="card">
       <h2>Start Pump</h2>
       <form action="/startPump" method="POST">
-        <button name="duration" value="15" type="submit">15 Second Pump</button>
-        <button name="duration" value="30" type="submit">30 Second Pump</button>
-        <button name="duration" value="60" type="submit">1 Minute Pump</button>
+        <button name="duration" value="300" type="submit">5 Minute Pump</button>
+        <button name="duration" value="600" type="submit">10 Minute Pump</button>
+        <button name="duration" value="900" type="submit">15 Minute Pump</button>
       </form>
 
       <form action="/startPump" method="POST" style="margin-top:20px;">
-        <input type="number" name="duration" placeholder="Custom (sec)" min="1" max="180" required>
+        <input type="number" name="duration" placeholder="Custom (sec)" min="1" max="900" required>
         <button type="submit">Start Custom</button>
       </form>
 
@@ -184,7 +184,7 @@ void postStartPump() {
 
   // Cap the duration to a safe maximum, e.g., 300 seconds
   if (durationSec < 1) durationSec = 1;
-  if (durationSec > 180) durationSec = 180;
+  if (durationSec > 900) durationSec = 900;
 
   digitalWrite(pumpPin, HIGH);
   pumpActive = true;
